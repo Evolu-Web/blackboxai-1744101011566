@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Commandes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex h-screen">
+    <!-- Sidebar (same as dashboard) -->
+    <div class="sidebar bg-blue-800 text-white w-64 p-4 flex flex-col">
+        <!-- Sidebar content from dashboard.html -->
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto">
+        <header class="bg-white shadow-sm p-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-800">Gestion des Commandes</h2>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Rechercher..." 
+                            class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    <button id="refreshOrders" class="p-2 text-gray-600 hover:text-blue-500">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-6">
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">Statut</label>
+                        <select id="statusFilter" class="border rounded-lg px-3 py-2">
+                            <option value="">Tous</option>
+                            <option value="pending">En attente</option>
+                            <option value="processing">En traitement</option>
+                            <option value="shipped">Expédié</option>
+                            <option value="delivered">Livré</option>
+                            <option value="cancelled">Annulé</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">Date de</label>
+                        <input type="date" id="dateFrom" class="border rounded-lg px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">à</label>
+                        <input type="date" id="dateTo" class="border rounded-lg px-3 py-2">
+                    </div>
+                    <button id="applyFilters" 
+                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 mt-6">
+                        Appliquer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Articles</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="ordersTable">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+                <div class="p-4 border-t flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        Affichage de <span id="startItem">1</span> à <span id="endItem">10</span> sur <span id="totalItems">0</span> commandes
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="prevPage" class="px-3 py-1 border rounded disabled:opacity-50">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button id="nextPage" class="px-3 py-1 border rounded disabled:opacity-50">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold">Détails de la commande <span id="modalOrderId"></span></h3>
+                    <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">Informations client</h4>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p id="customerName"></p>
+                            <p id="customerEmail"></p>
+                            <p id="customerPhone"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">Adresse de livraison</h4>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p id="shippingAddress"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 mb-2">Articles</h4>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prix</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderItems">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="px-4 py-2 text-right font-medium">Total</td>
+                                <td class="px-4 py-2 font-medium" id="orderTotal"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">Mettre à jour le statut</label>
+                        <select id="updateStatus" class="border rounded-lg px-3 py-2">
+                            <option value="pending">En attente</option>
+                            <option value="processing">En traitement</option>
+                            <option value="shipped">Expédié</option>
+                            <option value="delivered">Livré</option>
+                            <option value="cancelled">Annulé</option>
+                        </select>
+                    </div>
+                    <div class="space-x-2">
+                        <button id="saveStatus" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                            Enregistrer
+                        </button>
+                        <button id="printOrder" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                            <i class="fas fa-print mr-2"></i>Imprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let allOrders = [];
+        let currentOrderId = null;
+
+        // DOM Elements
+        const ordersTable = document.getElementById('ordersTable');
+        const orderModal = document.getElementById('orderModal');
+        const closeModal = document.getElementById('closeModal');
+        const refreshBtn = document.getElementById('refreshOrders');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            fetchOrders();
+            setupEventListeners();
+        });
+
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Fetch orders from API
+        async function fetchOrders() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/orders', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    allOrders = await response.json();
+                    renderOrders();
+                } else {
+                    throw new Error('Failed to fetch orders');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors du chargement des commandes');
+            }
+        }
+
+        // Render orders in table with pagination
+        function renderOrders(filteredOrders = allOrders) {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+            ordersTable.innerHTML = paginatedOrders.map(order => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">${order._id.slice(-6)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${order.customer?.name || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${order.items.length} article(s)</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${order.totalAmount} €</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            ${getStatusColorClass(order.status)}">
+                            ${getStatusText(order.status)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">${new Date(order.createdAt).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <button onclick="viewOrderDetails('${order._id}')" 
+                            class="text-blue-500 hover:text-blue-700 mr-2">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick="editOrderStatus('${order._id}')" 
+                            class="text-yellow-500 hover:text-yellow-700">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Update pagination info
+            document.getElementById('startItem').textContent = startIndex + 1;
+            document.getElementById('endItem').textContent = Math.min(endIndex, filteredOrders.length);
+            document.getElementById('totalItems').textContent = filteredOrders.length;
+
+            // Enable/disable pagination buttons
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = endIndex >= filteredOrders.length;
+        }
+
+        // View order details
+        async function viewOrderDetails(orderId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/orders/${orderId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const order = await response.json();
+                    currentOrderId = order._id;
+                    
+                    // Populate modal
+                    document.getElementById('modalOrderId').textContent = `#${order._id.slice(-6)}`;
+                    document.getElementById('customerName').textContent = order.customer?.name || 'N/A';
+                    document.getElementById('customerEmail').textContent = order.customer?.email || 'N/A';
+                    document.getElementById('customerPhone').textContent = order.customer?.phone || 'N/A';
+                    
+                    const address = order.shippingAddress || {};
+                    document.getElementById('shippingAddress').innerHTML = `
+                        ${address.street || ''}<br>
+                        ${address.postalCode || ''} ${address.city || ''}<br>
+                        ${address.country || ''}
+                    `;
+                    
+                    // Populate order items
+                    const orderItems = document.getElementById('orderItems');
+                    orderItems.innerHTML = order.items.map(item => `
+                        <tr>
+                            <td class="px-4 py-2">${item.name}</td>
+                            <td class="px-4 py-2">${item.price} €</td>
+                            <td class="px-4 py-2">${item.quantity}</td>
+                            <td class="px-4 py-2">${item.price * item.quantity} €</td>
+                        </tr>
+                    `).join('');
+                    
+                    document.getElementById('orderTotal').textContent = `${order.totalAmount} €`;
+                    document.getElementById('updateStatus').value = order.status;
+                    
+                    // Show modal
+                    orderModal.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors du chargement des détails de la commande');
+            }
+        }
+
+        // Helper functions
+        function getStatusColorClass(status) {
+            const statusClasses = {
+                pending: 'bg-yellow-100 text-yellow-800',
+                processing: 'bg-blue-100 text-blue-800',
+                shipped: 'bg-indigo-100 text-indigo-800',
+                delivered: 'bg-green-100 text-green-800',
+                cancelled: 'bg-red-100 text-red-800'
+            };
+            return statusClasses[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getStatusText(status) {
+            const statusTexts = {
+                pending: 'En attente',
+                processing: 'En traitement',
+                shipped: 'Expédié',
+                delivered: 'Livré',
+                cancelled: 'Annulé'
+            };
+            return statusTexts[status] || status;
+        }
+
+        // Event listeners
+        function setupEventListeners() {
+            closeModal.addEventListener('click', () => {
+                orderModal.classList.add('hidden');
+            });
+
+            refreshBtn.addEventListener('click', fetchOrders);
+
+            applyFiltersBtn.addEventListener('click', applyFilters);
+
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderOrders();
+                }
+            });
+
+            document.getElementById('nextPage').addEventListener('click', () => {
+                const totalPages = Math.ceil(allOrders.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderOrders();
+                }
+            });
+
+            document.getElementById('saveStatus').addEventListener('click', updateOrderStatus);
+
+            document.getElementById('printOrder').addEventListener('click', () => {
+                window.print();
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+
+            let filteredOrders = [...allOrders];
+
+            if (statusFilter) {
+                filteredOrders = filteredOrders.filter(order => order.status === statusFilter);
+            }
+
+            if (dateFrom) {
+                const fromDate = new Date(dateFrom);
+                filteredOrders = filteredOrders.filter(order => new Date(order.createdAt) >= fromDate);
+            }
+
+            if (dateTo) {
+                const toDate = new Date(dateTo);
+                filteredOrders = filteredOrders.filter(order => new Date(order.createdAt) <= toDate);
+            }
+
+            currentPage = 1;
+            renderOrders(filteredOrders);
+        }
+
+        // Update order status
+        async function updateOrderStatus() {
+            try {
+                const newStatus = document.getElementById('updateStatus').value;
+                const token = localStorage.getItem('token');
+                
+                const response = await fetch(`/api/orders/${currentOrderId}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    alert('Statut mis à jour avec succès');
+                    fetchOrders();
+                    orderModal.classList.add('hidden');
+                } else {
+                    throw new Error('Failed to update order');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors de la mise à jour du statut');
+            }
+        }
+
+        // Make functions available globally
+        window.viewOrderDetails = viewOrderDetails;
+        window.editOrderStatus = editOrderStatus;
+    </script>
+</body>
+</html>
