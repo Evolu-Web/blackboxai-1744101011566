@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .sidebar {
+            transition: all 0.3s;
+        }
+        .sidebar.collapsed {
+            width: 5rem;
+        }
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex h-screen">
+    <!-- Sidebar -->
+    <div class="sidebar bg-blue-800 text-white w-64 p-4 flex flex-col">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-xl font-bold">Backoffice</h1>
+            <button id="toggleSidebar" class="text-white">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <nav class="flex-1">
+            <ul class="space-y-2">
+                <li>
+                    <a href="dashboard.html" class="flex items-center p-2 rounded hover:bg-blue-700">
+                        <i class="fas fa-tachometer-alt mr-3"></i>
+                        <span class="nav-text">Tableau de bord</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="orders.html" class="flex items-center p-2 rounded hover:bg-blue-700">
+                        <i class="fas fa-shopping-cart mr-3"></i>
+                        <span class="nav-text">Commandes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="customers.html" class="flex items-center p-2 rounded hover:bg-blue-700">
+                        <i class="fas fa-users mr-3"></i>
+                        <span class="nav-text">Clients</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="carousel.html" class="flex items-center p-2 rounded hover:bg-blue-700">
+                        <i class="fas fa-images mr-3"></i>
+                        <span class="nav-text">Carrousel</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="mt-auto">
+            <a href="#" id="logout" class="flex items-center p-2 rounded hover:bg-blue-700">
+                <i class="fas fa-sign-out-alt mr-3"></i>
+                <span class="nav-text">Déconnexion</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto">
+        <header class="bg-white shadow-sm p-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-800">Tableau de Bord</h2>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">Admin</span>
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-6">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500">Commandes</p>
+                            <h3 class="text-2xl font-bold" id="ordersCount">0</h3>
+                        </div>
+                        <div class="p-3 rounded-full bg-blue-100 text-blue-500">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500">Clients</p>
+                            <h3 class="text-2xl font-bold" id="customersCount">0</h3>
+                        </div>
+                        <div class="p-3 rounded-full bg-green-100 text-green-500">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500">Éléments Carrousel</p>
+                            <h3 class="text-2xl font-bold" id="carouselCount">0</h3>
+                        </div>
+                        <div class="p-3 rounded-full bg-purple-100 text-purple-500">
+                            <i class="fas fa-images"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="bg-white p-6 rounded-lg shadow mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Commandes récentes</h3>
+                    <a href="orders.html" class="text-blue-500 hover:underline">Voir tout</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="recentOrders">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Toggle sidebar
+        document.getElementById('toggleSidebar').addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+        });
+
+        // Logout
+        document.getElementById('logout').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        });
+
+        // Fetch dashboard data
+        async function fetchDashboardData() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Fetch counts
+                const [ordersRes, customersRes, carouselRes] = await Promise.all([
+                    fetch('/api/orders', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }),
+                    fetch('/api/customers', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }),
+                    fetch('/api/carousel', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
+                ]);
+
+                if (ordersRes.ok && customersRes.ok && carouselRes.ok) {
+                    const orders = await ordersRes.json();
+                    const customers = await customersRes.json();
+                    const carouselItems = await carouselRes.json();
+
+                    document.getElementById('ordersCount').textContent = orders.length;
+                    document.getElementById('customersCount').textContent = customers.length;
+                    document.getElementById('carouselCount').textContent = carouselItems.length;
+
+                    // Display recent orders (last 5)
+                    const recentOrders = orders.slice(0, 5);
+                    const ordersTable = document.getElementById('recentOrders');
+                    ordersTable.innerHTML = recentOrders.map(order => `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">${order._id.slice(-6)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${order.customer?.name || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${order.totalAmount} €</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded-full 
+                                    ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
+                                      order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                                      'bg-yellow-100 text-yellow-800'}">
+                                    ${order.status}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">${new Date(order.createdAt).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', fetchDashboardData);
+    </script>
+</body>
+</html>
