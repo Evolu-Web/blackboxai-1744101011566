@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion du Carrousel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex h-screen">
+    <!-- Sidebar (same as dashboard) -->
+    <div class="sidebar bg-blue-800 text-white w-64 p-4 flex flex-col">
+        <!-- Sidebar content from dashboard.html -->
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto">
+        <header class="bg-white shadow-sm p-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-800">Gestion du Carrousel</h2>
+                <button id="addCarouselItem" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    <i class="fas fa-plus mr-2"></i>Ajouter un élément
+                </button>
+            </div>
+        </header>
+
+        <main class="p-6">
+            <!-- Carousel Items Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="carouselItems">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Carousel Item Modal -->
+    <div id="carouselModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <h3 class="text-xl font-semibold" id="modalTitle">Ajouter un élément au carrousel</h3>
+                    <button id="closeCarouselModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="carouselForm">
+                    <input type="hidden" id="carouselItemId">
+                    
+                    <div class="mb-6">
+                        <label class="block text-gray-700 mb-2">Image</label>
+                        <div class="flex items-center justify-center w-full">
+                            <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                                    <p class="mb-2 text-sm text-gray-500">Cliquez pour télécharger</p>
+                                    <p class="text-xs text-gray-500">PNG, JPG, JPEG (Max. 5MB)</p>
+                                </div>
+                                <input id="imageUpload" type="file" class="hidden" accept="image/*" />
+                            </label>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <div id="imagePreview" class="hidden">
+                                <img id="previewImage" src="" alt="Preview" class="max-h-40 mx-auto rounded-lg">
+                                <button type="button" id="removeImage" class="text-red-500 text-sm mt-2 hover:text-red-700">
+                                    <i class="fas fa-trash mr-1"></i>Supprimer l'image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label for="title" class="block text-gray-700 mb-2">Titre</label>
+                            <input type="text" id="title" required
+                                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="link" class="block text-gray-700 mb-2">Lien</label>
+                            <input type="url" id="link" 
+                                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="description" class="block text-gray-700 mb-2">Description</label>
+                        <textarea id="description" rows="3"
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" id="cancelCarousel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                            Annuler
+                        </button>
+                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                            Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let carouselItems = [];
+        let currentCarouselItem = null;
+        let selectedImage = null;
+
+        // DOM Elements
+        const carouselItemsContainer = document.getElementById('carouselItems');
+        const carouselModal = document.getElementById('carouselModal');
+        const closeCarouselModal = document.getElementById('closeCarouselModal');
+        const addCarouselBtn = document.getElementById('addCarouselItem');
+        const carouselForm = document.getElementById('carouselForm');
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImage = document.getElementById('previewImage');
+        const removeImageBtn = document.getElementById('removeImage');
+        const cancelCarouselBtn = document.getElementById('cancelCarousel');
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            fetchCarouselItems();
+            setupEventListeners();
+        });
+
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Fetch carousel items from API
+        async function fetchCarouselItems() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/carousel', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    carouselItems = await response.json();
+                    renderCarouselItems();
+                } else {
+                    throw new Error('Failed to fetch carousel items');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors du chargement des éléments du carrousel');
+            }
+        }
+
+        // Render carousel items
+        function renderCarouselItems() {
+            carouselItemsContainer.innerHTML = carouselItems.map(item => `
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="relative">
+                        <img src="${item.imageUrl}" alt="${item.title}" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 flex space-x-1">
+                            <button onclick="editCarouselItem('${item._id}')" 
+                                class="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600">
+                                <i class="fas fa-edit text-sm"></i>
+                            </button>
+                            <button onclick="deleteCarouselItem('${item._id}')" 
+                                class="bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-1">${item.title}</h3>
+                        <p class="text-gray-600 text-sm mb-3">${item.description}</p>
+                        <a href="${item.link}" target="_blank" class="text-blue-500 text-sm hover:underline">
+                            <i class="fas fa-link mr-1"></i>Voir le lien
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Open modal for adding new item
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Ajouter un élément au carrousel';
+            document.getElementById('carouselItemId').value = '';
+            carouselForm.reset();
+            imagePreview.classList.add('hidden');
+            selectedImage = null;
+            currentCarouselItem = null;
+            carouselModal.classList.remove('hidden');
+        }
+
+        // Open modal for editing item
+        async function editCarouselItem(itemId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/carousel/${itemId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    currentCarouselItem = await response.json();
+                    document.getElementById('modalTitle').textContent = 'Modifier l\'élément du carrousel';
+                    document.getElementById('carouselItemId').value = currentCarouselItem._id;
+                    document.getElementById('title').value = currentCarouselItem.title;
+                    document.getElementById('description').value = currentCarouselItem.description;
+                    document.getElementById('link').value = currentCarouselItem.link;
+                    
+                    // Show existing image
+                    previewImage.src = currentCarouselItem.imageUrl;
+                    imagePreview.classList.remove('hidden');
+                    selectedImage = null;
+                    
+                    carouselModal.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors du chargement de l\'élément');
+            }
+        }
+
+        // Delete carousel item
+        async function deleteCarouselItem(itemId) {
+            if (confirm('Voulez-vous vraiment supprimer cet élément ?')) {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`/api/carousel/${itemId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        fetchCarouselItems();
+                    } else {
+                        throw new Error('Failed to delete item');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Erreur lors de la suppression');
+                }
+            }
+        }
+
+        // Event listeners
+        function setupEventListeners() {
+            closeCarouselModal.addEventListener('click', () => {
+                carouselModal.classList.add('hidden');
+            });
+
+            cancelCarouselBtn.addEventListener('click', () => {
+                carouselModal.classList.add('hidden');
+            });
+
+            addCarouselBtn.addEventListener('click', openAddModal);
+
+            imageUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('La taille de l\'image ne doit pas dépasser 5MB');
+                        return;
+                    }
+                    
+                    selectedImage = file;
+                    previewImage.src = URL.createObjectURL(file);
+                    imagePreview.classList.remove('hidden');
+                }
+            });
+
+            removeImageBtn.addEventListener('click', () => {
+                imageUpload.value = '';
+                previewImage.src = '';
+                imagePreview.classList.add('hidden');
+                selectedImage = null;
+            });
+
+            carouselForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                try {
+                    const token = localStorage.getItem('token');
+                    const formData = new FormData();
+                    
+                    if (selectedImage) {
+                        formData.append('image', selectedImage);
+                    }
+                    formData.append('title', document.getElementById('title').value);
+                    formData.append('description', document.getElementById('description').value);
+                    formData.append('link', document.getElementById('link').value);
+                    
+                    const itemId = document.getElementById('carouselItemId').value;
+                    const url = itemId ? `/api/carousel/${itemId}` : '/api/carousel';
+                    const method = itemId ? 'PUT' : 'POST';
+                    
+                    const response = await fetch(url, {
+                        method,
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        carouselModal.classList.add('hidden');
+                        fetchCarouselItems();
+                    } else {
+                        throw new Error('Failed to save item');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Erreur lors de l\'enregistrement');
+                }
+            });
+        }
+
+        // Make functions available globally
+        window.editCarouselItem = editCarouselItem;
+        window.deleteCarouselItem = deleteCarouselItem;
+    </script>
+</body>
+</html>
