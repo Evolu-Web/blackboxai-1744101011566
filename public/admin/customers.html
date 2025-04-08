@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Clients</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex h-screen">
+    <!-- Sidebar (same as dashboard) -->
+    <div class="sidebar bg-blue-800 text-white w-64 p-4 flex flex-col">
+        <!-- Sidebar content from dashboard.html -->
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto">
+        <header class="bg-white shadow-sm p-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-800">Gestion des Clients</h2>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input type="text" id="customerSearch" placeholder="Rechercher client..." 
+                            class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    <button id="refreshCustomers" class="p-2 text-gray-600 hover:text-blue-500">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-6">
+            <!-- Customer Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500">Clients actifs</p>
+                            <h3 class="text-2xl font-bold" id="activeCustomers">0</h3>
+                        </div>
+                        <div class="p-3 rounded-full bg-green-100 text-green-500">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500">Nouveaux (7j)</p>
+                            <h3 class="text-2xl font-bold" id="newCustomers">0</h3>
+                        </div>
+                        <div class="p-3 rounded-full bg-blue-100 text-blue-500">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500">Commandes moyennes</p>
+                            <h3 class="text-2xl font-bold" id="avgOrders">0</h3>
+                        </div>
+                        <div class="p-3 rounded-full bg-purple-100 text-purple-500">
+                            <i class="fas fa-shopping-basket"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500">Dépense moyenne</p>
+                            <h3 class="text-2xl font-bold" id="avgSpending">0 €</h3>
+                        </div>
+                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-500">
+                            <i class="fas fa-euro-sign"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Téléphone</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commandes</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dépense totale</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inscrit le</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="customersTable">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+                <div class="p-4 border-t flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        Affichage de <span id="custStartItem">1</span> à <span id="custEndItem">10</span> sur <span id="custTotalItems">0</span> clients
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="custPrevPage" class="px-3 py-1 border rounded disabled:opacity-50">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button id="custNextPage" class="px-3 py-1 border rounded disabled:opacity-50">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Customer Detail Modal -->
+    <div id="customerModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <h3 class="text-xl font-semibold">Détails du client</h3>
+                    <button id="closeCustomerModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">Informations</h4>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="mb-3">
+                                <p class="text-sm text-gray-500">Nom complet</p>
+                                <p id="customerFullName" class="font-medium"></p>
+                            </div>
+                            <div class="mb-3">
+                                <p class="text-sm text-gray-500">Email</p>
+                                <p id="customerDetailEmail" class="font-medium"></p>
+                            </div>
+                            <div class="mb-3">
+                                <p class="text-sm text-gray-500">Téléphone</p>
+                                <p id="customerPhone" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Statut</p>
+                                <p id="customerStatus" class="font-medium"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">Adresse</h4>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p id="customerAddress"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 mb-2">Historique des commandes</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Commande</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customerOrders">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2">
+                    <button id="editCustomer" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                        <i class="fas fa-edit mr-2"></i>Modifier
+                    </button>
+                    <button id="deactivateCustomer" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+                        <i class="fas fa-user-slash mr-2"></i>Désactiver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentCustPage = 1;
+        const custItemsPerPage = 10;
+        let allCustomers = [];
+        let currentCustomerId = null;
+
+        // DOM Elements
+        const customersTable = document.getElementById('customersTable');
+        const customerModal = document.getElementById('customerModal');
+        const closeCustomerModal = document.getElementById('closeCustomerModal');
+        const refreshBtn = document.getElementById('refreshCustomers');
+        const searchInput = document.getElementById('customerSearch');
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            fetchCustomers();
+            setupEventListeners();
+        });
+
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Fetch customers from API
+        async function fetchCustomers() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/customers', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    allCustomers = await response.json();
+                    updateCustomerStats();
+                    renderCustomers();
+                } else {
+                    throw new Error('Failed to fetch customers');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors du chargement des clients');
+            }
+        }
+
+        // Update customer statistics
+        function updateCustomerStats() {
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+            
+            // Active customers
+            document.getElementById('activeCustomers').textContent = allCustomers.length;
+            
+            // New customers (last 7 days)
+            const newCustomers = allCustomers.filter(customer => 
+                new Date(customer.createdAt) > sevenDaysAgo
+            );
+            document.getElementById('newCustomers').textContent = newCustomers.length;
+            
+            // Average orders and spending (would need order data)
+            document.getElementById('avgOrders').textContent = '2'; // Placeholder
+            document.getElementById('avgSpending').textContent = '150 €'; // Placeholder
+        }
+
+        // Render customers in table with pagination
+        function renderCustomers(filteredCustomers = allCustomers) {
+            const startIndex = (currentCustPage - 1) * custItemsPerPage;
+            const endIndex = startIndex + custItemsPerPage;
+            const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
+
+            customersTable.innerHTML = paginatedCustomers.map(customer => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <i class="fas fa-user text-gray-500"></i>
+                            </div>
+                            <div class="ml-4">
+                                <div class="font-medium">${customer.name}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">${customer.email}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${customer.phone || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">5</td> <!-- Placeholder order count -->
+                    <td class="px-6 py-4 whitespace-nowrap">750 €</td> <!-- Placeholder total spending -->
+                    <td class="px-6 py-4 whitespace-nowrap">${new Date(customer.createdAt).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <button onclick="viewCustomerDetails('${customer._id}')" 
+                            class="text-blue-500 hover:text-blue-700 mr-2">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick="editCustomer('${customer._id}')" 
+                            class="text-yellow-500 hover:text-yellow-700">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Update pagination info
+            document.getElementById('custStartItem').textContent = startIndex + 1;
+            document.getElementById('custEndItem').textContent = Math.min(endIndex, filteredCustomers.length);
+            document.getElementById('custTotalItems').textContent = filteredCustomers.length;
+
+            // Enable/disable pagination buttons
+            document.getElementById('custPrevPage').disabled = currentCustPage === 1;
+            document.getElementById('custNextPage').disabled = endIndex >= filteredCustomers.length;
+        }
+
+        // View customer details
+        async function viewCustomerDetails(customerId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/customers/${customerId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const customer = await response.json();
+                    currentCustomerId = customer._id;
+                    
+                    // Populate modal
+                    document.getElementById('customerFullName').textContent = customer.name;
+                    document.getElementById('customerDetailEmail').textContent = customer.email;
+                    document.getElementById('customerPhone').textContent = customer.phone || 'N/A';
+                    document.getElementById('customerStatus').textContent = customer.isActive ? 'Actif' : 'Inactif';
+                    
+                    // Populate address
+                    const address = customer.address || {};
+                    document.getElementById('customerAddress').innerHTML = `
+                        ${address.street || ''}<br>
+                        ${address.postalCode || ''} ${address.city || ''}<br>
+                        ${address.country || ''}
+                    `;
+                    
+                    // Populate customer orders (placeholder)
+                    const customerOrders = document.getElementById('customerOrders');
+                    customerOrders.innerHTML = `
+                        <tr>
+                            <td class="px-4 py-2">CMD-12345</td>
+                            <td class="px-4 py-2">15/01/2023</td>
+                            <td class="px-4 py-2">120 €</td>
+                            <td class="px-4 py-2"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Livré</span></td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">CMD-12344</td>
+                            <td class="px-4 py-2">05/01/2023</td>
+                            <td class="px-4 py-2">85 €</td>
+                            <td class="px-4 py-2"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Livré</span></td>
+                        </tr>
+                    `;
+                    
+                    // Show modal
+                    customerModal.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors du chargement des détails du client');
+            }
+        }
+
+        // Event listeners
+        function setupEventListeners() {
+            closeCustomerModal.addEventListener('click', () => {
+                customerModal.classList.add('hidden');
+            });
+
+            refreshBtn.addEventListener('click', fetchCustomers);
+
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredCustomers = allCustomers.filter(customer => 
+                    customer.name.toLowerCase().includes(searchTerm) || 
+                    customer.email.toLowerCase().includes(searchTerm)
+                );
+                currentCustPage = 1;
+                renderCustomers(filteredCustomers);
+            });
+
+            document.getElementById('custPrevPage').addEventListener('click', () => {
+                if (currentCustPage > 1) {
+                    currentCustPage--;
+                    renderCustomers();
+                }
+            });
+
+            document.getElementById('custNextPage').addEventListener('click', () => {
+                const totalPages = Math.ceil(allCustomers.length / custItemsPerPage);
+                if (currentCustPage < totalPages) {
+                    currentCustPage++;
+                    renderCustomers();
+                }
+            });
+
+            document.getElementById('editCustomer').addEventListener('click', () => {
+                alert('Fonctionnalité d\'édition à implémenter');
+            });
+
+            document.getElementById('deactivateCustomer').addEventListener('click', () => {
+                if (confirm('Voulez-vous vraiment désactiver ce client ?')) {
+                    alert('Fonctionnalité de désactivation à implémenter');
+                }
+            });
+        }
+
+        // Make functions available globally
+        window.viewCustomerDetails = viewCustomerDetails;
+        window.editCustomer = editCustomer;
+    </script>
+</body>
+</html>
